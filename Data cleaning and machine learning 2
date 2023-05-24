@@ -1,0 +1,156 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+np.seterr(divide='ignore', invalid='ignore')
+
+# Reads the .csv file and loads the data into a DataFrame object
+data = pd.read_csv('/content/drive/MyDrive/train.csv', encoding='utf-8',header=None)
+test = pd.read_csv('/content/drive/MyDrive/test.csv', encoding='utf-8',header=None)
+
+# Checks for missing data
+print(data.isnull().sum())
+print(test.isnull().sum())
+
+# Deletes unnecessary spaces in all columns
+data = data.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
+test = test.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
+
+# Deletes unnecessary characters in all columns
+data = data.replace('[^0-9a-zA-Z]', '', regex=True)
+test = test.replace('[^0-9a-zA-Z]', '', regex=True)
+
+# Delete blank cells in between
+data = data.interpolate()
+test = test.interpolate()
+
+#if the whole column consists of NaN values delete the whole column
+data = data.dropna(axis=1, how='all') 
+test = test.dropna(axis=1, how='all') 
+
+#delete entire row if rows have any NaN values
+data = data.dropna(axis=0, how='any') 
+test = test.dropna(axis=0, how='any') 
+
+# Shifts the filled columns to the left
+data = data.apply(lambda x: x.dropna().reset_index(drop=True))
+test = test.apply(lambda x: x.dropna().reset_index(drop=True))
+
+# Find categorical columns
+categorical_cols = [col for col in data.columns if data[col].dtype == 'object']
+num_cols=[col for col in data.columns if data[col].dtype !="object"]
+categorical_cols = [col for col in test.columns if test[col].dtype == 'object']
+num_cols=[col for col in test.columns if test[col].dtype !="object"]
+
+# Encode categorical variables
+for col in categorical_cols:
+    le = LabelEncoder()
+    data[col] = le.fit_transform(data[col].astype(str))
+for col in categorical_cols:
+    le = LabelEncoder()
+    test[col] = le.fit_transform(test[col].astype(str))
+    
+#We checked again is there any null value in the data
+data.isnull().sum()
+test.isnull().sum()
+
+# Allows saving cleaned data to a new .csv file
+data.to_csv('the_last_cleaned_data.csv', index=False, header=None)
+test.to_csv('the_last_cleaned_test.csv', index=False, header=None
+
+data = pd.read_csv('the_last_cleaned_data.csv', encoding='utf-8',header=None)
+test = pd.read_csv('the_last_cleaned_test.csv', encoding='utf-8',header=None)
+
+#Unique number and unique values of cateographic variables
+for col in data:
+    print(f"Unique Count: {data[col].nunique()}")
+    print(f"{col}: {data[col].unique()}","\n\n")
+for col in test:
+    print(f"Unique Count: {test[col].nunique()}")
+    print(f"{col}: {test[col].unique()}","\n\n")
+    
+data=data.drop(33, axis=1)
+test=test.drop(33, axis=1)
+data=data.drop(75, axis=1)
+test=test.drop(75, axis=1)
+
+
+import seaborn as sn
+import matplotlib.pyplot as plt
+
+#FOR DATA
+corrMatrix = data.corr()
+sn.set (rc = {'figure.figsize':(66, 66)})
+sn.heatmap(corrMatrix, annot=True)
+plt.show()
+
+corrMatrix = data.corr()
+high_corr_cols = (corrMatrix.abs() > 0.9).sum()
+high_corr_cols = high_corr_cols[high_corr_cols > 1].index
+drop_cols = set()
+for col in high_corr_cols:
+    if col not in drop_cols:
+        drop_cols |= set(high_corr_cols[high_corr_cols != col])
+data = data.drop(drop_cols, axis=1)
+corrMatrix = data.corr()
+sn.set(rc={'figure.figsize':(40, 40)})
+sn.heatmap(corrMatrix, annot=True)
+plt.show()
+
+#FOR TEST
+import seaborn as sn
+import matplotlib.pyplot as plt
+
+corrMatrix2 = test.corr()
+sn.set (rc = {'figure.figsize':(66, 66)})
+sn.heatmap(corrMatrix, annot=True)
+plt.show()
+    
+corrMatrix = test.corr()
+high_corr_cols = (corrMatrix.abs() > 0.9).sum()
+high_corr_cols = high_corr_cols[high_corr_cols > 1].index
+drop_cols = set()
+for col in high_corr_cols:
+    if col not in drop_cols:
+        drop_cols |= set(high_corr_cols[high_corr_cols != col])
+test = test.drop(drop_cols, axis=1)
+corrMatrix = test.corr()
+sn.set(rc={'figure.figsize':(40, 40)})
+sn.heatmap(corrMatrix, annot=True)
+plt.show()
+
+#Drop the hich correlation columns
+test=test.drop(high_corr_cols)
+data=data.drop(high_corr_cols)
+
+--------------------------------------------------
+
+X_train = data.drop(121, axis=1)
+y_train = data[121]
+
+X_test = data.drop(121, axis=1)
+y_test = data[121]
+
+label_encoder = LabelEncoder()
+y_train = label_encoder.fit_transform(y_train)
+y_test = label_encoder.transform(y_test)
+
+X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
+
+y_pred_val = model.predict(X_val)
+accuracy_val = accuracy_score(y_val, y_pred_val)
+print("Validation Accuracy:", accuracy_val)
+
+y_pred_test = model.predict(X_test)
+accuracy_test = accuracy_score(y_test, y_pred_test)
+print("Test Accuracy:", accuracy_test)
+
+
