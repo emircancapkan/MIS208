@@ -1,0 +1,112 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+np.seterr(divide='ignore', invalid='ignore')
+
+# Reads the .csv file and loads the data into a DataFrame object
+data = pd.read_csv('/content/drive/MyDrive/train.csv', encoding='utf-8',header=None)
+
+# Checks for missing data
+print(data.isnull().sum())
+
+# Deletes unnecessary spaces in all columns
+data = data.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
+
+# Deletes unnecessary characters in all columns
+data = data.replace('[^0-9a-zA-Z]', '', regex=True)
+
+# Delete blank cells in between
+data = data.interpolate()
+
+#if the whole column consists of NaN values delete the whole column
+data = data.dropna(axis=1, how='all') 
+
+#delete entire row if rows have any NaN values
+data = data.dropna(axis=0, how='any') 
+
+# Shifts the filled columns to the left
+data = data.apply(lambda x: x.dropna().reset_index(drop=True))
+
+# Find categorical columns
+categorical_cols = [col for col in data.columns if data[col].dtype == 'object']
+num_cols=[col for col in data.columns if data[col].dtype !="object"]
+
+# Encode categorical variables
+for col in categorical_cols:
+    le = LabelEncoder()
+    data[col] = le.fit_transform(data[col].astype(str))
+    
+#We checked again is there any null value in the data
+data.isnull().sum()
+
+# Allows saving cleaned data to a new .csv file
+data.to_csv('the_last_cleaned_data.csv', index=False, header=None)
+
+data = pd.read_csv('/content/the_last_cleaned_data.csv', encoding='utf-8',header=None)
+
+#Unique number and unique values of cateographic variables
+for col in data:
+    print(f"Unique Count: {data[col].nunique()}")
+    print(f"{col}: {data[col].unique()}","\n\n")
+    
+data=data.drop(33, axis=1)
+data=data.drop(75, axis=1)
+
+import seaborn as sn
+import matplotlib.pyplot as plt
+
+corrMatrix = data.corr()
+sn.set (rc = {'figure.figsize':(66, 66)})
+sn.heatmap(corrMatrix, annot=True)
+plt.show()
+
+corrMatrix = data.corr()
+high_corr_cols = (corrMatrix.abs() > 0.9).sum()
+high_corr_cols = high_corr_cols[high_corr_cols > 1].index
+drop_cols = set()
+for col in high_corr_cols:
+    if col not in drop_cols:
+        drop_cols |= set(high_corr_cols[high_corr_cols != col])
+data = data.drop(drop_cols, axis=1)
+corrMatrix = data.corr()
+sn.set(rc={'figure.figsize':(40, 40)})
+sn.heatmap(corrMatrix, annot=True)
+plt.show()
+
+#Drop the hich correlation columns
+data=data.drop(high_corr_cols)
+
+# Initializing the Scaler
+scaler = StandardScaler()
+# To scale data
+scaler.fit(data)
+
+# Loading the dataset and separate its properties and target variable (X and y)
+# X is the matrix of the arguments in the dataset
+# y is the vector of the target variable
+X = data.drop(121, axis=1)
+y = data[121]
+
+# Creating training and test datasets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Create the Random Forest classifier and train the model
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
+
+# Making predictions using the test dataset
+y_pred = model.predict(X_test)
+
+#Evaluating forecast success
+accuracy = accuracy_score(y_test, y_pred)
+print("Model accuracy rate:",accuracy)
+
+
+
+
+
